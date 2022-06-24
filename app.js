@@ -1,5 +1,5 @@
 const qrcode = require("qrcode-terminal");
-const { Client, LocalAuth } = require("whatsapp-web.js");
+const { Client, LocalAuth, MessageMedia } = require("whatsapp-web.js");
 const utilities = require("./utils/utilities.js");
 
 const fs = require("fs");
@@ -62,7 +62,9 @@ const instagramToYoutube = async (url, uploader, instagramCookie, receiver) => {
             `${conf.downloadFolderName}\\${videoCaption}.mp4`
         );
 
-        client.sendMessage(receiver, 'Video Descargado. Subiendo a youtube ...');
+        let media = await MessageMedia.fromFilePath(path.join(__dirname, 'media', 'uploading.jpg'));
+        client.sendMessage(receiver, media, { caption: `Video procesado.\nSubiendo a youtube.` });
+        //client.sendMessage(receiver, `Video procesado.\n Subiendo a youtube`);
 
         if (video.mime == "video/mp4" && video.size > 0) {
             const uploadedVideoData = await youtubeApi.uploadVideo(
@@ -72,7 +74,8 @@ const instagramToYoutube = async (url, uploader, instagramCookie, receiver) => {
 
             const videoId = uploadedVideoData.id;
             const addedToPlaylistVideo = await youtubeApi.addVideoToPlaylist(conf.youtubePlaylistID, videoId)
-            client.sendMessage(receiver, `Video subido. Link: https://www.youtube.com/watch?v=${videoId}`);
+            let media = await MessageMedia.fromFilePath(path.join(__dirname, 'media', 'uploaded.jpg'));
+            client.sendMessage(receiver, media, { caption: `Video subido.\nLink: https://www.youtube.com/watch?v=${videoId}` });
         }
     }
     catch (e) {
@@ -165,25 +168,27 @@ const wspBot = async () => {
         if (message.body.includes('http')) {
             const urlType = utilities.checkUrl(message.body)
             if (urlType.state == false) {
-                client.sendMessage(message.from, 'Invalid URL');
+                let media = await MessageMedia.fromFilePath(path.join(__dirname, 'media', 'error.jpg'));
+                client.sendMessage(message.from, media, { caption: `Hola ${sender.pushname}, ingresaste una URL inválida. Por favor intentalo nuevamente.` });
                 return;
             }
             if (urlType.state == true && urlType.value == 'instagram') {
-                client.sendMessage(message.from, `Hola ${sender.pushname}, ingresaste un video de instagram.`);
-                client.sendMessage(message.from, 'Procesando ...');
+                let media = await MessageMedia.fromFilePath(path.join(__dirname, 'media', 'processing.jpg'));
+                client.sendMessage(message.from, media, { caption: `Hola ${sender.pushname}, veo ingresaste un video de instagram. Déjame procesarlo.` });
+                //client.sendMessage(message.from, 'Procesando ...');
                 await instagramToYoutube(utilities.extractUrl(message.body), sender.pushname, instagramCookie, message.from)
 
                 return;
             }
             if (urlType.state == true && urlType.value == 'tiktok') {
-                client.sendMessage(message.from, 'you just send a tiktok URL');
+                let media = await MessageMedia.fromFilePath(path.join(__dirname, 'media', 'processing.jpg'));
+                client.sendMessage(message.from, media, { caption: `Hola ${sender.pushname}, veo ingresaste un video de tiktok. Déjame procesarlo.` });
                 await tiktokToYoutube(utilities.extractUrl(message.body), sender.pushname, message.from)
                 return;
             }
         }
-        /*  if (message.body === "hello") {
-             message.reply("Hiiiii");
-         } */
+        let media = await MessageMedia.fromFilePath(path.join(__dirname, 'media', 'error.jpg'));
+        client.sendMessage(message.from, media, { caption: `Hola ${sender.pushname}, debes ingresar una URL. Por favor intentalo nuevamente.` });
     });
 }
 
