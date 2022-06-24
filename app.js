@@ -1,4 +1,3 @@
-/* WSP Bot*/
 const qrcode = require("qrcode-terminal");
 const { Client, LocalAuth } = require("whatsapp-web.js");
 const utilities = require("./utils/utilities.js");
@@ -9,20 +8,20 @@ const http = require("http");
 const https = require("https");
 
 const igApi = require('./api/instagram.js');
+const tiktokApi = require('./api/tiktok.js');
 const youtubeApi = require('./api/youtube.js');
 
-const DOWNLOAD_FOLDER = "download";
-const YOUTUBE_SAVING_PLAYLIST_ID = 'PLYdk9WQIfahi4UOvFnt_ZrtpHTy2Wpsxc'
+const conf = require('./conf/conf.json');;
 
 const client = new Client({
     authStrategy: new LocalAuth()
 });
 
 var instagramCookie = null;
-var youtubeAccountStatus = null;
+//var youtubeAccountStatus = null;
 
 /* Create the temp folder */
-fs.mkdir(path.join(__dirname, DOWNLOAD_FOLDER), (err) => {
+fs.mkdir(path.join(__dirname, conf.downloadFolderName), (err) => {
     if (err) {
         if (err.code === "EEXIST") {
             return
@@ -35,6 +34,7 @@ fs.mkdir(path.join(__dirname, DOWNLOAD_FOLDER), (err) => {
 const setApis = async () => {
     /* Instagram */
     if (await igApi.connect() == false) {
+        console.log(`Couldn't connect to insgram. Exiting ...`);
         process.exit(0);
     }
     /* Saves an ig cookie. We need this cookie later to download the videos */
@@ -44,6 +44,7 @@ const setApis = async () => {
     youtubeClientSecret = await youtubeApi.checkClientSecret();
 
     if (!youtubeClientSecret) {
+        console.log(`Couldn't read youtube secret file. Exiting ...`);
         process.exit(0);
     }
 
@@ -58,7 +59,7 @@ const instagramToYoutube = async (url, uploader, instagramCookie, receiver) => {
 
         const video = await download(
             videoURL,
-            `${DOWNLOAD_FOLDER}\\${videoCaption}.mp4`
+            `${conf.downloadFolderName}\\${videoCaption}.mp4`
         );
 
         client.sendMessage(receiver, 'Video Descargado. Subiendo a youtube ...');
@@ -67,11 +68,39 @@ const instagramToYoutube = async (url, uploader, instagramCookie, receiver) => {
             const uploadedVideoData = await youtubeApi.uploadVideo(
                 videoCaption,
                 `Original video url: ${url}, Uploaded on ${new Date()} by ${uploader}`,
-                `${DOWNLOAD_FOLDER}\\${videoCaption}.mp4`)
-
+                `${conf.downloadFolderName}\\${videoCaption}.mp4`)
 
             const videoId = uploadedVideoData.id;
-            const addedToPlaylistVideo = await youtubeApi.addVideoToPlaylist(YOUTUBE_SAVING_PLAYLIST_ID, videoId)
+            const addedToPlaylistVideo = await youtubeApi.addVideoToPlaylist(conf.youtubePlaylistID, videoId)
+            client.sendMessage(receiver, `Video subido. Link: https://www.youtube.com/watch?v=${videoId}`);
+        }
+    }
+    catch (e) {
+        console.log("There was an error: ", e);
+    }
+}
+
+const tiktokToYoutube = async (url, uploader, receiver) => {
+    try {
+        const videoData = await tiktokApi.getVideoData(url);
+        const videoURL = videoData.videoUrl;
+        const videoCaption = `[${uploader}] ${videoData.videoCaption}`;
+
+        const video = await download(
+            videoURL,
+            `${conf.downloadFolderName}\\${videoCaption}.mp4`
+        );
+
+        client.sendMessage(receiver, 'Video Descargado. Subiendo a youtube ...');
+
+        if (video.mime == "video/mp4" && video.size > 0) {
+            const uploadedVideoData = await youtubeApi.uploadVideo(
+                videoCaption,
+                `Original video url: ${videoData.fullUrl}, Uploaded on ${new Date()} by ${uploader}`,
+                `${conf.downloadFolderName}\\${videoCaption}.mp4`)
+
+            const videoId = uploadedVideoData.id;
+            const addedToPlaylistVideo = await youtubeApi.addVideoToPlaylist(conf.youtubePlaylistID, videoId)
             client.sendMessage(receiver, `Video subido. Link: https://www.youtube.com/watch?v=${videoId}`);
         }
     }
@@ -101,7 +130,6 @@ const download = async (url, filePath) => {
             response.pipe(file);
         });
 
-        // The destination stream is ended by the time it's called
         file.on("finish", () => resolve(fileInfo));
 
         request.on("error", (err) => {
@@ -149,6 +177,7 @@ const wspBot = async () => {
             }
             if (urlType.state == true && urlType.value == 'tiktok') {
                 client.sendMessage(message.from, 'you just send a tiktok URL');
+                await tiktokToYoutube(utilities.extractUrl(message.body), sender.pushname, message.from)
                 return;
             }
         }

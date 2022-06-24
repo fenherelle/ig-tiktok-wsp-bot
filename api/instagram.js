@@ -60,7 +60,7 @@ const getCookie = () => {
 /******************************************************************************************/
 
 const formatUrl = (url) => {
-    var urlParts = url.split("/");
+    const urlParts = url.split("/");
 
     if (urlParts[2] == igLongUrl || urlParts[2] == igShortUrl) {
         return { videoCode: urlParts[4], mediaType: urlParts[3] }

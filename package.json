@@ -5,6 +5,7 @@
   "main": "app.js",
   "dependencies": {
     "axios": "^0.27.2",
+    "cheerio": "^1.0.0-rc.11",
     "googleapis": "^103.0.0",
     "instagram-web-api": "^2.2.2",
     "qrcode-terminal": "^0.12.0",

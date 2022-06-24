@@ -2,5 +2,6 @@
 /.wwebjs_auth
 /conf/client_secret.json
 /conf/credentials.json
+/conf/conf.json
 /download
 cookies.json
