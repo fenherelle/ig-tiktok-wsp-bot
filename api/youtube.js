@@ -162,7 +162,8 @@ const uploadVideo = async (name, description, videoFilePath) => {
     const res = await upload(auth, name, description, videoFilePath);
     return res;
   } catch (err) {
-    console.log("Error loading client secret file: " + err);
+    if (err.includes('The request cannot be completed because you have exceeded your')) return false
+    console.log("There was an error on the uploadVideo function " + err);
     return;
   }
 }
@@ -174,6 +175,8 @@ const uploadVideo = async (name, description, videoFilePath) => {
  */
 
 const upload = async (auth, name, description, videoFilePath) => {
+
+  console.log(`name: ${name}, description: ${description}, videoFilePath: ${videoFilePath}`);
   var service = google.youtube("v3");
   var request = await service.videos.insert({
     auth: auth,

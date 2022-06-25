@@ -55,7 +55,7 @@ const instagramToYoutube = async (url, uploader, instagramCookie, receiver) => {
     try {
         const videoData = await igApi.getPostLink(url, instagramCookie);
         const videoURL = videoData.link;
-        const videoCaption = `[${uploader}] ${videoData.caption}`;
+        const videoCaption = `[${uploader}] ${utilities.sanitizeCaption(videoData.caption)}`;
 
         const video = await download(
             videoURL,
@@ -73,7 +73,7 @@ const instagramToYoutube = async (url, uploader, instagramCookie, receiver) => {
                 `${conf.downloadFolderName}\\${videoCaption}.mp4`)
 
             const videoId = uploadedVideoData.id;
-            const addedToPlaylistVideo = await youtubeApi.addVideoToPlaylist(conf.youtubePlaylistID, videoId)
+            await youtubeApi.addVideoToPlaylist(conf.youtubePlaylistID, videoId)
             let media = await MessageMedia.fromFilePath(path.join(__dirname, 'media', 'uploaded.jpg'));
             client.sendMessage(receiver, media, { caption: `Video subido.\nLink: https://www.youtube.com/watch?v=${videoId}` });
         }
@@ -103,7 +103,7 @@ const tiktokToYoutube = async (url, uploader, receiver) => {
                 `${conf.downloadFolderName}\\${videoCaption}.mp4`)
 
             const videoId = uploadedVideoData.id;
-            const addedToPlaylistVideo = await youtubeApi.addVideoToPlaylist(conf.youtubePlaylistID, videoId)
+            await youtubeApi.addVideoToPlaylist(conf.youtubePlaylistID, videoId)
             client.sendMessage(receiver, `Video subido. Link: https://www.youtube.com/watch?v=${videoId}`);
         }
     }
