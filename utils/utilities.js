@@ -18,14 +18,14 @@ const removeExtraSpaces = (text) => {
     return text.replace(/\s+/g, ' ').trim();
 }
 
-const sanitizeCaption = (caption) => {
-    let sanitizedCaption = removeExtraSpaces((caption.split('\n').join(' ').replace(/[+]|•|'/gi, '')))
-    if (sanitizedCaption.length > 100) return sanitizedCaption.substring(0, 100); // Set a maximun length of 100 to avoid problems writing the video to the OS filesystem.
+const generateVideoTitle = (caption) => {
+    let sanitizedCaption = `${removeExtraSpaces((caption.split('\n').join(' ').replace(/[+]|•|'/gi, '')))}`
+    if (sanitizedCaption.length > 100) return sanitizedCaption.substring(0, 100); // Youtube limits the video title to 100 characters
     return sanitizedCaption;
 }
 
 module.exports = {
     checkUrl,
     extractUrl,
-    sanitizeCaption
+    generateVideoTitle
 }

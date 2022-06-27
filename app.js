@@ -11,7 +11,9 @@ const igApi = require('./api/instagram.js');
 const tiktokApi = require('./api/tiktok.js');
 const youtubeApi = require('./api/youtube.js');
 
-const conf = require('./conf/conf.json');;
+const conf = require('./conf/conf.json');
+
+const QUOTA_EXCEEDED_ERROR = 'quotaExceeded';
 
 const client = new Client({
     authStrategy: new LocalAuth()
@@ -55,11 +57,11 @@ const instagramToYoutube = async (url, uploader, instagramCookie, receiver) => {
     try {
         const videoData = await igApi.getPostLink(url, instagramCookie);
         const videoURL = videoData.link;
-        const videoCaption = `[${uploader}] ${utilities.sanitizeCaption(videoData.caption)}`;
+        const videoTitle = `${utilities.generateVideoTitle(videoData.caption)}`;
 
         const video = await download(
             videoURL,
-            `${conf.downloadFolderName}\\${videoCaption}.mp4`
+            `${conf.downloadFolderName}\\${videoTitle}.mp4`
         );
 
         let media = await MessageMedia.fromFilePath(path.join(__dirname, 'media', 'uploading.jpg'));
@@ -68,9 +70,15 @@ const instagramToYoutube = async (url, uploader, instagramCookie, receiver) => {
 
         if (video.mime == "video/mp4" && video.size > 0) {
             const uploadedVideoData = await youtubeApi.uploadVideo(
-                videoCaption,
+                videoTitle,
                 `Original video url: ${url}, Uploaded on ${new Date()} by ${uploader}`,
-                `${conf.downloadFolderName}\\${videoCaption}.mp4`)
+                `${conf.downloadFolderName}\\${videoTitle}.mp4`)
+
+            if (uploadedVideoData === QUOTA_EXCEEDED_ERROR) {
+                let media = await MessageMedia.fromFilePath(path.join(__dirname, 'media', 'quota.jpg'));
+                client.sendMessage(receiver, media, { caption: `La cuota diaria de la api de youtube ha sido sobrepasada. No puedo subir el video ahora \u{1F614}` });
+                return;
+            }
 
             const videoId = uploadedVideoData.id;
             await youtubeApi.addVideoToPlaylist(conf.youtubePlaylistID, videoId)
@@ -87,20 +95,26 @@ const tiktokToYoutube = async (url, uploader, receiver) => {
     try {
         const videoData = await tiktokApi.getVideoData(url);
         const videoURL = videoData.videoUrl;
-        const videoCaption = `[${uploader}] ${videoData.videoCaption}`;
+        const videoTitle = `${utilities.generateVideoTitle(videoData.caption)}`;
 
         const video = await download(
             videoURL,
-            `${conf.downloadFolderName}\\${videoCaption}.mp4`
+            `${conf.downloadFolderName}\\${videoTitle}.mp4`
         );
 
         client.sendMessage(receiver, 'Video Descargado. Subiendo a youtube ...');
 
         if (video.mime == "video/mp4" && video.size > 0) {
             const uploadedVideoData = await youtubeApi.uploadVideo(
-                videoCaption,
+                videoTitle,
                 `Original video url: ${videoData.fullUrl}, Uploaded on ${new Date()} by ${uploader}`,
-                `${conf.downloadFolderName}\\${videoCaption}.mp4`)
+                `${conf.downloadFolderName}\\${videoTitle}.mp4`)
+
+            if (uploadedVideoData === QUOTA_EXCEEDED_ERROR) {
+                let media = await MessageMedia.fromFilePath(path.join(__dirname, 'media', 'quota.jpg'));
+                client.sendMessage(receiver, media, { caption: `La cuota diaria de la api de youtube ha sido sobrepasada. No puedo subir el video ahora \u{1F614}` });
+                return;
+            }
 
             const videoId = uploadedVideoData.id;
             await youtubeApi.addVideoToPlaylist(conf.youtubePlaylistID, videoId)

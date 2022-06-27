@@ -162,7 +162,7 @@ const uploadVideo = async (name, description, videoFilePath) => {
     const res = await upload(auth, name, description, videoFilePath);
     return res;
   } catch (err) {
-    if (err.includes('The request cannot be completed because you have exceeded your')) return false
+    //if (err.includes('The request cannot be completed because you have exceeded your')) return false
     console.log("There was an error on the uploadVideo function " + err);
     return;
   }
@@ -176,25 +176,32 @@ const uploadVideo = async (name, description, videoFilePath) => {
 
 const upload = async (auth, name, description, videoFilePath) => {
 
-  console.log(`name: ${name}, description: ${description}, videoFilePath: ${videoFilePath}`);
   var service = google.youtube("v3");
-  var request = await service.videos.insert({
-    auth: auth,
-    part: "snippet,status",
-    requestBody: {
-      snippet: {
-        title: name,
-        description: description,
+  try {
+    var request = await service.videos.insert({
+      auth: auth,
+      part: "snippet,status",
+      requestBody: {
+        snippet: {
+          title: name,
+          description: description,
+        },
+        status: {
+          privacyStatus: "unlisted", // default for now
+        },
       },
-      status: {
-        privacyStatus: "unlisted", // default for now
+      media: {
+        body: fs.createReadStream(videoFilePath),
       },
-    },
-    media: {
-      body: fs.createReadStream(videoFilePath),
-    },
-  });
-  return request.data;
+    });
+    return request.data;
+  }
+  catch (e) {
+    if (e.hasOwnProperty('errors')) {
+      return e.errors[0].reason
+    }
+    return false;
+  }
 }
 
 /******************************************************************************** */

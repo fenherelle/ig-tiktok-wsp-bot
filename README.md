@@ -4,6 +4,7 @@
 
  ## todos
 
-- [ ] Generate a response when the youtube quota is exceeded.
+- [ x ] Generate a response when the youtube quota is exceeded.
 - [ ] Add a queue system to upload the videos when the youtube quota is exceeded.
+- [ ] Add a command to list the server stored videos.
 - [ ] Add a command to download the server stored videos.
