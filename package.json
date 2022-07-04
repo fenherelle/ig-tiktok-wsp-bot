@@ -8,6 +8,7 @@
     "cheerio": "^1.0.0-rc.11",
     "googleapis": "^103.0.0",
     "instagram-web-api": "^2.2.2",
+    "mongoose": "^6.4.2",
     "qrcode-terminal": "^0.12.0",
     "tough-cookie-filestore2": "^1.0.0",
     "whatsapp-web.js": "^1.16.7"

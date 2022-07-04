@@ -1,23 +1,29 @@
-const qrcode = require("qrcode-terminal");
-const { Client, LocalAuth, MessageMedia } = require("whatsapp-web.js");
-const utilities = require("./utils/utilities.js");
+const qrcode = require('qrcode-terminal');
+const { Client, LocalAuth, MessageMedia } = require('whatsapp-web.js');
+const fs = require('fs');
+const path = require('path');
+const http = require('http');
+const https = require('https');
+const mongoose = require('mongoose');
 
-const fs = require("fs");
-const path = require("path");
-const http = require("http");
-const https = require("https");
-
+const utilities = require('./utils/utilities.js');
 const igApi = require('./api/instagram.js');
 const tiktokApi = require('./api/tiktok.js');
 const youtubeApi = require('./api/youtube.js');
-
 const conf = require('./conf/conf.json');
+const mongodbUsername = conf.mongodbUser;
+const mongodbPassword = conf.mongodbPassword;
+const mongodbCluster = conf.mongodbCluster;
+const mongodbDatabase = conf.mongodbDatabase;
+const Video = require('./db/models/videos');
 
 const QUOTA_EXCEEDED_ERROR = 'quotaExceeded';
 
 const client = new Client({
     authStrategy: new LocalAuth()
 });
+
+const dbURI = `mongodb+srv://${mongodbUsername}:${mongodbPassword}@${mongodbCluster}/${mongodbDatabase}?retryWrites=true&w=majority`
 
 var instagramCookie = null;
 //var youtubeAccountStatus = null;
@@ -32,6 +38,33 @@ fs.mkdir(path.join(__dirname, conf.downloadFolderName), (err) => {
         }
     }
 });
+
+/**
+ * 
+ * DB Methods
+ * 
+ */
+
+const connectDB = async () => {
+    try {
+        await mongoose.connect(dbURI, {
+            useNewUrlParser: true,
+            useUnifiedTopology: true
+        });
+        console.log('Mongodb connected!!');
+    } catch (err) {
+        console.log('Failed to connect to Mongodb', err);
+    }
+};
+
+const saveEntry = async (entry) => {
+    try {
+        await entry.save();
+        console.log('Entry succesfully saved.');
+    } catch (err) {
+        console.log('There was an error saving the video data into the database:', err);
+    }
+}
 
 const setApis = async () => {
     /* Instagram */
@@ -55,6 +88,7 @@ const setApis = async () => {
 
 const instagramToYoutube = async (url, uploader, instagramCookie, receiver) => {
     try {
+
         const videoData = await igApi.getPostLink(url, instagramCookie);
         const videoURL = videoData.link;
         const videoTitle = `${utilities.generateVideoTitle(videoData.caption)}`;
@@ -75,6 +109,16 @@ const instagramToYoutube = async (url, uploader, instagramCookie, receiver) => {
                 `${conf.downloadFolderName}\\${videoTitle}.mp4`)
 
             if (uploadedVideoData === QUOTA_EXCEEDED_ERROR) {
+                const entry = new Video({
+                    title: videoTitle,
+                    youtubeLink: null,
+                    originalLink: url,
+                    uploader: uploader,
+                    status: 'pending'
+                })
+
+                await saveEntry(entry);
+
                 let media = await MessageMedia.fromFilePath(path.join(__dirname, 'media', 'quota.jpg'));
                 client.sendMessage(receiver, media, { caption: `La cuota diaria de la api de youtube ha sido sobrepasada. No puedo subir el video ahora \u{1F614}` });
                 return;
@@ -82,6 +126,16 @@ const instagramToYoutube = async (url, uploader, instagramCookie, receiver) => {
 
             const videoId = uploadedVideoData.id;
             await youtubeApi.addVideoToPlaylist(conf.youtubePlaylistID, videoId)
+
+            const entry = new Video({
+                title: videoTitle,
+                youtubeLink: `https://www.youtube.com/watch?v=${videoId}`,
+                originalLink: url,
+                uploader: uploader,
+                status: 'uploaded'
+            })
+            await saveEntry(entry);
+
             let media = await MessageMedia.fromFilePath(path.join(__dirname, 'media', 'uploaded.jpg'));
             client.sendMessage(receiver, media, { caption: `Video subido.\nLink: https://www.youtube.com/watch?v=${videoId}` });
         }
@@ -111,6 +165,15 @@ const tiktokToYoutube = async (url, uploader, receiver) => {
                 `${conf.downloadFolderName}\\${videoTitle}.mp4`)
 
             if (uploadedVideoData === QUOTA_EXCEEDED_ERROR) {
+                const entry = new Video({
+                    title: videoTitle,
+                    youtubeLink: null,
+                    originalLink: url,
+                    uploader: uploader,
+                    status: 'pending'
+                })
+                await saveEntry(entry);
+
                 let media = await MessageMedia.fromFilePath(path.join(__dirname, 'media', 'quota.jpg'));
                 client.sendMessage(receiver, media, { caption: `La cuota diaria de la api de youtube ha sido sobrepasada. No puedo subir el video ahora \u{1F614}` });
                 return;
@@ -118,6 +181,16 @@ const tiktokToYoutube = async (url, uploader, receiver) => {
 
             const videoId = uploadedVideoData.id;
             await youtubeApi.addVideoToPlaylist(conf.youtubePlaylistID, videoId)
+
+            const entry = new Video({
+                title: videoTitle,
+                youtubeLink: `https://www.youtube.com/watch?v=${videoId}`,
+                originalLink: url,
+                uploader: uploader,
+                status: 'uploaded'
+            })
+            await saveEntry(entry);
+
             client.sendMessage(receiver, `Video subido. Link: https://www.youtube.com/watch?v=${videoId}`);
         }
     }
@@ -175,6 +248,7 @@ const wspBot = async () => {
 
     client.on("ready", () => {
         console.log("Client is ready!");
+        connectDB();
     });
 
     client.on("message", async (message) => {

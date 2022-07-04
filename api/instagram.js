@@ -2,9 +2,10 @@ const axios = require("axios");
 const Instagram = require('instagram-web-api')
 const FileCookieStore = require('tough-cookie-filestore2');
 const cookieStore = new FileCookieStore('./cookies.json');
-const igCredentials = require('../conf/credentials.json');
-const username = igCredentials.username;
-const password = igCredentials.password;
+const conf = require('../conf/conf.json');
+const username = conf.instagramUsername;
+const password = conf.instagramPassword;
+console.log(username, password);
 const client = new Instagram({ username, password, cookieStore });
 
 const igLongUrl = 'www.instagram.com';
@@ -16,6 +17,8 @@ const userAgent = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 
 const connect = async () => {
     try {
         const clientStatus = await client.login();
+        // AREGLAR ERROR DE AUTENTICACION { user: false, authenticated: false, status: 'ok' }
+        console.log(clientStatus);
         if (clientStatus.hasOwnProperty('errors')) {
             console.log('There was an error connecting to instagram. Exiting.');
             return false;
@@ -76,11 +79,13 @@ const getPostLink = async (url, cookie) => {
     const formattedUrl = formatUrl(url)
     const graphqlUrl = `${baseUrl}/${formattedUrl.mediaType}/${formattedUrl.videoCode}/?__a=1&__d=dis`
 
+    console.log(graphqlUrl)
     try {
         const response = await axios.get(graphqlUrl, { headers: { 'User-Agent': userAgent, 'Cookie': cookie } });
         let link = '';
         let caption = '';
 
+        console.log(response);
         link = response.data.items[0].video_versions[0].url;
         caption = getCaption(response.data)
 

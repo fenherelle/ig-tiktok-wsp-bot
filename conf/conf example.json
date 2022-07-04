@@ -1,4 +1,10 @@
 {
-    "youtubePlaylistID": "YOUR_YOUTUBE_PLAYLIST_ID",
+    "instagramUsername": "IG_USERNAME",
+    "instagramPassword": "IG_PASSWORD",
+    "mongodbUser": "MONGODB_USERNAME",
+    "mongodbPassword": "MONGODB_PASSWORD",
+    "mongodbCluster": "MONGODB_CLUSTER",
+    "mongodbDatabase": "MONGODB_DATABASE",
+    "youtubePlaylistID": "YOUTUBE_PLAYLIST_ID",
     "downloadFolderName": "DOWNLOAD_FOLDER_NAME"
 }
