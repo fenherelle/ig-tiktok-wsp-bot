@@ -1,4 +1,4 @@
- # ig-tiktok-wsp-bot
+ # Tank
 
  **A whatsapp bot to save videos from instagram and tiktok to youtube.**
 
